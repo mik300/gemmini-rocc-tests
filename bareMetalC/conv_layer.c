@@ -11,25 +11,7 @@
 
 
 
-#define IN_ROW_DIM 32
-#define IN_COL_DIM 32
-#define IN_CHANNELS 3
-#define OUT_CHANNELS 16
 
-
-#define BATCH_SIZE 1
-#define KERNEL_DIM 3
-#define PADDING 1
-#define STRIDE 1
-
-
-
-#define NO_BIAS true
-
-#define OUT_ROW_DIM ((IN_ROW_DIM + 2*PADDING - KERNEL_DIM) / STRIDE + 1)
-#define OUT_COL_DIM ((IN_COL_DIM + 2*PADDING - KERNEL_DIM) / STRIDE + 1)
-#define PATCH_SIZE (KERNEL_DIM * KERNEL_DIM * IN_CHANNELS)
-#define N_PATCHES (BATCH_SIZE * OUT_ROW_DIM * OUT_COL_DIM)
 
 
 
@@ -64,7 +46,25 @@ void init_zeros_acc(acc_t * buf, int len) {
     }
 }
 
+const int IN_ROW_DIM = sizeof(conv_1_in[0]) / sizeof(conv_1_in[0][0]); //get size of second dimension
+const int IN_COL_DIM = sizeof(conv_1_in[0][0]) / sizeof(conv_1_in[0][0][0]); //get size of third dimension
+const int IN_CHANNELS = sizeof(conv_1_in[0][0][0]) / sizeof(elem_t);//get size of fourth dimension
+const int OUT_CHANNELS = sizeof(conv_1_w) / sizeof(conv_1_w[0]); //get size of first dimension
 
+
+const int BATCH_SIZE = sizeof(conv_1_in) / sizeof(conv_1_in[0]); //get size of fist dimension of the array
+const int KERNEL_DIM = sizeof(conv_1_w[0]) / sizeof(conv_1_w[0][0]);
+const int PADDING = 1;
+const int STRIDE = 1;
+
+
+
+const int NO_BIAS = 1;
+
+const int OUT_ROW_DIM = ((IN_ROW_DIM + 2*PADDING - KERNEL_DIM) / STRIDE + 1);
+const int OUT_COL_DIM = ((IN_COL_DIM + 2*PADDING - KERNEL_DIM) / STRIDE + 1);
+const int PATCH_SIZE = (KERNEL_DIM * KERNEL_DIM * IN_CHANNELS);
+const int N_PATCHES = (BATCH_SIZE * OUT_ROW_DIM * OUT_COL_DIM);
 
 int main() {
     #ifndef BAREMETAL
@@ -74,16 +74,32 @@ int main() {
         }
     #endif
 
+
+    
+
+    printf("IN_ROW_DIM = %d\n", IN_ROW_DIM);
+    printf("IN_COL_DIM = %d\n", IN_COL_DIM);
+    printf("IN_CHANNELS = %d\n", IN_CHANNELS);
+    printf("OUT_CHANNELS = %d\n", OUT_CHANNELS);
+
+    printf("BATCH_SIZE = %d\n", BATCH_SIZE);
+    printf("KERNEL_DIM = %d\n", KERNEL_DIM);
+    
+    printf("OUT_ROW_DIM = %d\n", OUT_ROW_DIM);
+    printf("OUT_COL_DIM = %d\n", OUT_COL_DIM);
+    printf("PATCH_SIZE = %d\n", PATCH_SIZE);
+    printf("N_PATCHES = %d\n", N_PATCHES);
+
     gemmini_flush(0);
     gemmini_config_multiplier(255, 16383);
     
 
     printf("Input dimensions (rows by columns): %u by %u\n", IN_ROW_DIM, IN_COL_DIM);
     printf("Output dimensions (rows by columns): %u by %u\n\n", OUT_ROW_DIM, OUT_COL_DIM);
-
+    
     //static elem_t input[BATCH_SIZE][IN_ROW_DIM][IN_COL_DIM][IN_CHANNELS];
     //static elem_t weights[OUT_CHANNELS][KERNEL_DIM][KERNEL_DIM][IN_CHANNELS];
-    static acc_t bias[OUT_CHANNELS];
+    acc_t bias[OUT_CHANNELS];
     //static elem_t output[BATCH_SIZE][OUT_ROW_DIM][OUT_COL_DIM][OUT_CHANNELS];
 
     
@@ -97,8 +113,8 @@ int main() {
         init_zeros_acc(&bias[0], sizeof(bias) / sizeof(acc_t));
 
 
-    static elem_t weights_mat[PATCH_SIZE][OUT_CHANNELS];
-    static elem_t output_mat[N_PATCHES][OUT_CHANNELS];
+    elem_t weights_mat[PATCH_SIZE][OUT_CHANNELS];
+    elem_t output_mat[N_PATCHES][OUT_CHANNELS];
 
     printf("Flatten weights...\n");
     flatten_weights(OUT_CHANNELS, KERNEL_DIM, IN_CHANNELS,
@@ -119,7 +135,7 @@ int main() {
         NO_BIAS ? NULL : (acc_t*)bias,
         (elem_t*)output_mat,
 
-        NO_ACTIVATION, 1.0 / 162, 0, 0, 0,
+        NO_ACTIVATION, 1.0 / 170, 0, 0, 0,
 
         WS);
     uint64_t end_gemmini = read_cycles();
