@@ -199,7 +199,7 @@ int main() {
 #endif
 
     gemmini_flush(0);
-    gemmini_config_multiplier(252, 16383);
+    gemmini_config_multiplier(251, 16383);
     // assert((in_dim + 2*padding - kernel_dim) % stride == 0);
 
     printf("Input dimensions (rows by columns): %u by %u\n", IN_ROW_DIM, IN_COL_DIM);
