@@ -46,14 +46,14 @@ void init_zeros_acc(acc_t * buf, int len) {
     }
 }
 
-const int IN_ROW_DIM = sizeof(conv_1_in[0]) / sizeof(conv_1_in[0][0]); //get size of second dimension
-const int IN_COL_DIM = sizeof(conv_1_in[0][0]) / sizeof(conv_1_in[0][0][0]); //get size of third dimension
-const int IN_CHANNELS = sizeof(conv_1_in[0][0][0]) / sizeof(elem_t);//get size of fourth dimension
-const int OUT_CHANNELS = sizeof(conv_1_w) / sizeof(conv_1_w[0]); //get size of first dimension
+const int IN_ROW_DIM = sizeof(layer3_0_conv2_in[0]) / sizeof(layer3_0_conv2_in[0][0]); //get size of second dimension
+const int IN_COL_DIM = sizeof(layer3_0_conv2_in[0][0]) / sizeof(layer3_0_conv2_in[0][0][0]); //get size of third dimension
+const int IN_CHANNELS = sizeof(layer3_0_conv2_in[0][0][0]) / sizeof(elem_t);//get size of fourth dimension
+const int OUT_CHANNELS = sizeof(layer3_0_conv2_w) / sizeof(layer3_0_conv2_w[0]); //get size of first dimension
 
 
-const int BATCH_SIZE = sizeof(conv_1_in) / sizeof(conv_1_in[0]); //get size of fist dimension of the array
-const int KERNEL_DIM = sizeof(conv_1_w[0]) / sizeof(conv_1_w[0][0]);
+const int BATCH_SIZE = sizeof(layer3_0_conv2_in) / sizeof(layer3_0_conv2_in[0]); //get size of fist dimension of the array
+const int KERNEL_DIM = sizeof(layer3_0_conv2_w[0]) / sizeof(layer3_0_conv2_w[0][0]);
 const int PADDING = 1;
 const int STRIDE = 1;
 
@@ -119,7 +119,7 @@ int main() {
     printf("Flatten weights...\n");
     flatten_weights(OUT_CHANNELS, KERNEL_DIM, IN_CHANNELS,
             PATCH_SIZE,
-            conv_1_w,
+            layer3_0_conv2_w,
             weights_mat);
 
     printf("Gemmini conv...\n");
@@ -130,12 +130,12 @@ int main() {
         STRIDE, 1, 1, PADDING, KERNEL_DIM,
         false, false, false, false, false,
 
-        (elem_t*)conv_1_in,
+        (elem_t*)layer3_0_conv2_in,
         (elem_t*)weights_mat,
-        NO_BIAS ? NULL : (acc_t*)bias,
+        NO_BIAS ? NULL : (acc_t*)layer3_0_conv2_b,
         (elem_t*)output_mat,
 
-        NO_ACTIVATION, 1.0 / 170, 0, 0, 0,
+        NO_ACTIVATION, 1.0 / 452, 0, 0, 0,
 
         WS);
     uint64_t end_gemmini = read_cycles();
@@ -149,7 +149,7 @@ int main() {
                 for (int icol = 0; icol < IN_COL_DIM; icol++) {
                     printf("[");
                     for (int ich = 0; ich < IN_CHANNELS; ich++) {
-                        printf("%d,", conv_1_in[batch][irow][icol][ich]);
+                        printf("%d,", layer3_0_conv2_in[batch][irow][icol][ich]);
                     }
                     printf("],");
                 }
@@ -167,7 +167,7 @@ int main() {
                 for (int icol = 0; icol < KERNEL_DIM; icol++) {
                     printf("[");
                     for (int ich = 0; ich < IN_CHANNELS; ich++) {
-                        printf("%d,", conv_1_w[batch][irow][icol][ich]);
+                        printf("%d,", layer3_0_conv2_w[batch][irow][icol][ich]);
                     }
                     printf("],");
                 }
