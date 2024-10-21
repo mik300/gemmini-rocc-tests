@@ -11,11 +11,6 @@
 
 
 
-
-
-
-
-
 void flatten_weights(int out_channels, int kernel_dim, int in_channels,
         int patch_size,
         elem_t weights[out_channels][kernel_dim][kernel_dim][in_channels],
@@ -47,14 +42,14 @@ void init_zeros_acc(acc_t * buf, int len) {
     }
 }
 
-const int IN_ROW_DIM = sizeof(layer3_0_conv2_in[0]) / sizeof(layer3_0_conv2_in[0][0]); //get size of second dimension
-const int IN_COL_DIM = sizeof(layer3_0_conv2_in[0][0]) / sizeof(layer3_0_conv2_in[0][0][0]); //get size of third dimension
-const int IN_CHANNELS = sizeof(layer3_0_conv2_in[0][0][0]) / sizeof(elem_t);//get size of fourth dimension
-const int OUT_CHANNELS = sizeof(layer3_0_conv2_w) / sizeof(layer3_0_conv2_w[0]); //get size of first dimension
+const int IN_ROW_DIM = sizeof(layer1_0_conv1_in[0]) / sizeof(layer1_0_conv1_in[0][0]); //get size of second dimension
+const int IN_COL_DIM = sizeof(layer1_0_conv1_in[0][0]) / sizeof(layer1_0_conv1_in[0][0][0]); //get size of third dimension
+const int IN_CHANNELS = sizeof(layer1_0_conv1_in[0][0][0]) / sizeof(elem_t);//get size of fourth dimension
+const int OUT_CHANNELS = sizeof(layer1_0_conv1_w) / sizeof(layer1_0_conv1_w[0]); //get size of first dimension
 
 
-const int BATCH_SIZE = sizeof(layer3_0_conv2_in) / sizeof(layer3_0_conv2_in[0]); //get size of fist dimension of the array
-const int KERNEL_DIM = sizeof(layer3_0_conv2_w[0]) / sizeof(layer3_0_conv2_w[0][0]);
+const int BATCH_SIZE = sizeof(layer1_0_conv1_in) / sizeof(layer1_0_conv1_in[0]); //get size of fist dimension of the array
+const int KERNEL_DIM = sizeof(layer1_0_conv1_w[0]) / sizeof(layer1_0_conv1_w[0][0]);
 const int PADDING = 1;
 const int STRIDE = 1;
 
@@ -120,7 +115,7 @@ int main() {
     printf("Flatten weights...\n");
     flatten_weights(OUT_CHANNELS, KERNEL_DIM, IN_CHANNELS,
             PATCH_SIZE,
-            layer3_0_conv2_w,
+            layer1_0_conv1_w,
             weights_mat);
 
     printf("Gemmini conv...\n");
@@ -131,12 +126,12 @@ int main() {
         STRIDE, 1, 1, PADDING, KERNEL_DIM,
         false, false, false, false, false,
 
-        (elem_t*)layer3_0_conv2_in,
+        (elem_t*)layer1_0_conv1_in,
         (elem_t*)weights_mat,
-        NO_BIAS ? NULL : (acc_t*)layer3_0_conv2_b,
+        NO_BIAS ? NULL : (acc_t*)layer1_0_conv1_b,
         (elem_t*)output_mat,
 
-        NO_ACTIVATION, 1.0 / 452,
+        NO_ACTIVATION, 1.0 / 276,
         0, 0, 0,
 
         WS);
@@ -151,7 +146,7 @@ int main() {
     //             for (int icol = 0; icol < IN_COL_DIM; icol++) {
     //                 printf("[");
     //                 for (int ich = 0; ich < IN_CHANNELS; ich++) {
-    //                     printf("%d,", layer3_0_conv2_in[batch][irow][icol][ich]);
+    //                     printf("%d,", layer1_0_conv1_in[batch][irow][icol][ich]);
     //                 }
     //                 printf("],");
     //             }
@@ -162,14 +157,14 @@ int main() {
     // printf("\n\n");
 
     // printf("weights:\n");
-    //     for (int batch = 0; batch < OUT_CHANNELS; batch++) {
+    //     for (int och = 0; och < OUT_CHANNELS; och++) {
     //         printf("[");
-    //         for (int irow = 0; irow < KERNEL_DIM; irow++) {
+    //         for (int wker = 0; wker < KERNEL_DIM; wker++) {
     //             printf("[");
-    //             for (int icol = 0; icol < KERNEL_DIM; icol++) {
+    //             for (int hker = 0; hker < KERNEL_DIM; hker++) {
     //                 printf("[");
     //                 for (int ich = 0; ich < IN_CHANNELS; ich++) {
-    //                     printf("%d,", layer3_0_conv2_w[batch][irow][icol][ich]);
+    //                     printf("%d,", layer1_0_conv1_w[och][wker][hker][ich]);
     //                 }
     //                 printf("],");
     //             }
@@ -180,8 +175,8 @@ int main() {
     // printf("\n\n");
 
     // printf("bias:\n");
-    //     for (int batch = 0; batch < OUT_CHANNELS; batch++) {
-    //         printf("%d,", bias[batch]);
+    //     for (int och = 0; och < OUT_CHANNELS; och++) {
+    //         printf("%d,", bias[och]);
     //     }
     // printf("\n\n");
 
@@ -190,11 +185,11 @@ int main() {
     printf("output_mat:\n");
     for (int orow = 0; orow < BATCH_SIZE * OUT_ROW_DIM * OUT_COL_DIM; orow++) {
         printf("[");
-        for (int ocol = 0; ocol < OUT_CHANNELS; ocol++) {
-            if(ocol == OUT_CHANNELS-1){
-                printf("%d", output_mat[orow][ocol]);
+        for (int och = 0; och < OUT_CHANNELS; och++) {
+            if(och == OUT_CHANNELS-1){
+                printf("%d", output_mat[orow][och]);
             } else{
-                printf("%d,", output_mat[orow][ocol]);
+                printf("%d,", output_mat[orow][och]);
             }
         }
         printf("]\n");

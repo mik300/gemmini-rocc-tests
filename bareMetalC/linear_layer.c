@@ -23,7 +23,7 @@ const int STRIDE = 1;
 
 
 
-const int NO_BIAS = 1;
+const int NO_BIAS = 0;
 
 const size_t I = BATCH_SIZE;
 const size_t J = NB_CLASSES;
@@ -60,50 +60,65 @@ int main() {
 
 
     uint64_t end_gemmini = read_cycles();
-    printf("Gemmini conv took %llu cycles\n", end_gemmini - start_gemmini);
+    printf("Gemmini conv took %llu cycles\n\n", end_gemmini - start_gemmini);
 
-    printf("input:\n");
-        for (int batch = 0; batch < BATCH_SIZE; batch++) {
-            printf("[");
-            for (int ich = 0; ich < IN_FEATURES; ich++) {
-                printf("%d,", linear_in[batch][ich]);
+    int max_index[BATCH_SIZE];
+    for (int batch = 0; batch < BATCH_SIZE; batch++) {
+        for (int i = 1; i < NB_CLASSES; i++) {
+            if (output_mat[batch][i] > output_mat[batch][max_index[batch]]) {
+                max_index[batch] = i;
             }
-            printf("],");
         }
-    printf("\n\n");
-
-    printf("weights:\n");
-        for (int batch = 0; batch < IN_FEATURES; batch++) {
-            printf("[");
-                for (int ich = 0; ich < NB_CLASSES; ich++) {
-                    printf("%d,", linear_w[batch][ich]);
-                }
-            printf("],");
-        }
-    printf("\n\n");
-
-    printf("bias:\n");
-        for (int batch = 0; batch < NB_CLASSES; batch++) {
-            printf("%d,", linear_b[batch]);
-        }
-    printf("\n\n");
-
-
+    }
 
     printf("output_mat:\n");
-    for (int orow = 0; orow < BATCH_SIZE; orow++) {
+    for (int batch = 0; batch < BATCH_SIZE; batch++) {
         printf("[");
-        for (int ocol = 0; ocol < NB_CLASSES; ocol++) {
-            if(ocol == NB_CLASSES-1){
-                printf("%d", output_mat[orow][ocol]);
+        for (int class = 0; class < NB_CLASSES; class++) {
+            if(class == NB_CLASSES-1){
+                printf("%d", output_mat[batch][class]);
             } else{
-                printf("%d,", output_mat[orow][ocol]);
+                printf("%d,", output_mat[batch][class]);
             }
         }
         printf("]\n");
     }
     printf("\n");
 
+    for (int batch = 0; batch < BATCH_SIZE; batch++) {
+        printf("max_index[%d] = %d\n", batch, max_index[batch]);
+        if(max_index[batch] != labels[batch]) {
+            exit(1);
+        }
+    }
+
+    // printf("input:\n");
+    //     for (int batch = 0; batch < BATCH_SIZE; batch++) {
+    //         printf("[");
+    //         for (int in_ft = 0; in_ft < IN_FEATURES; in_ft++) {
+    //             printf("%d,", linear_in[batch][in_ft]);
+    //         }
+    //         printf("],");
+    //     }
+    // printf("\n\n");
+
+
+    // printf("weights:\n");
+    //     for (int in_ft = 0; in_ft < IN_FEATURES; in_ft++) {
+    //         printf("[");
+    //             for (int class = 0; class < NB_CLASSES; class++) {
+    //                 printf("%d,", linear_w[in_ft][class]);
+    //             }
+    //         printf("],");
+    //     }
+    // printf("\n\n");
+
+
+    // printf("bias:\n");
+    //     for (int class = 0; class < NB_CLASSES; class++) {
+    //         printf("%d,", linear_b[class]);
+    //     }
+    // printf("\n\n");
 
     return 0;
 }
