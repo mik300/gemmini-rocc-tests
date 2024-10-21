@@ -7,7 +7,8 @@
 #include <sys/mman.h>
 #endif
 #include "include/gemmini_testutils.h"
-#include "conv_layer_params.h"
+#include "include/resnet8_params.h"
+
 
 
 
@@ -135,53 +136,54 @@ int main() {
         NO_BIAS ? NULL : (acc_t*)layer3_0_conv2_b,
         (elem_t*)output_mat,
 
-        NO_ACTIVATION, 1.0 / 452, 0, 0, 0,
+        NO_ACTIVATION, 1.0 / 452,
+        0, 0, 0,
 
         WS);
     uint64_t end_gemmini = read_cycles();
     printf("Gemmini conv took %llu cycles\n", end_gemmini - start_gemmini);
 
-    printf("input:\n");
-        for (int batch = 0; batch < BATCH_SIZE; batch++) {
-            printf("[");
-            for (int irow = 0; irow < IN_ROW_DIM; irow++) {
-                printf("[");
-                for (int icol = 0; icol < IN_COL_DIM; icol++) {
-                    printf("[");
-                    for (int ich = 0; ich < IN_CHANNELS; ich++) {
-                        printf("%d,", layer3_0_conv2_in[batch][irow][icol][ich]);
-                    }
-                    printf("],");
-                }
-                printf("],\n");
-            }
-            printf("],");
-        }
-    printf("\n\n");
+    // printf("input:\n");
+    //     for (int batch = 0; batch < BATCH_SIZE; batch++) {
+    //         printf("[");
+    //         for (int irow = 0; irow < IN_ROW_DIM; irow++) {
+    //             printf("[");
+    //             for (int icol = 0; icol < IN_COL_DIM; icol++) {
+    //                 printf("[");
+    //                 for (int ich = 0; ich < IN_CHANNELS; ich++) {
+    //                     printf("%d,", layer3_0_conv2_in[batch][irow][icol][ich]);
+    //                 }
+    //                 printf("],");
+    //             }
+    //             printf("],\n");
+    //         }
+    //         printf("],");
+    //     }
+    // printf("\n\n");
 
-    printf("weights:\n");
-        for (int batch = 0; batch < OUT_CHANNELS; batch++) {
-            printf("[");
-            for (int irow = 0; irow < KERNEL_DIM; irow++) {
-                printf("[");
-                for (int icol = 0; icol < KERNEL_DIM; icol++) {
-                    printf("[");
-                    for (int ich = 0; ich < IN_CHANNELS; ich++) {
-                        printf("%d,", layer3_0_conv2_w[batch][irow][icol][ich]);
-                    }
-                    printf("],");
-                }
-                printf("],\n");
-            }
-            printf("],");
-        }
-    printf("\n\n");
+    // printf("weights:\n");
+    //     for (int batch = 0; batch < OUT_CHANNELS; batch++) {
+    //         printf("[");
+    //         for (int irow = 0; irow < KERNEL_DIM; irow++) {
+    //             printf("[");
+    //             for (int icol = 0; icol < KERNEL_DIM; icol++) {
+    //                 printf("[");
+    //                 for (int ich = 0; ich < IN_CHANNELS; ich++) {
+    //                     printf("%d,", layer3_0_conv2_w[batch][irow][icol][ich]);
+    //                 }
+    //                 printf("],");
+    //             }
+    //             printf("],\n");
+    //         }
+    //         printf("],");
+    //     }
+    // printf("\n\n");
 
-    printf("bias:\n");
-        for (int batch = 0; batch < OUT_CHANNELS; batch++) {
-            printf("%d,", bias[batch]);
-        }
-    printf("\n\n");
+    // printf("bias:\n");
+    //     for (int batch = 0; batch < OUT_CHANNELS; batch++) {
+    //         printf("%d,", bias[batch]);
+    //     }
+    // printf("\n\n");
 
 
 

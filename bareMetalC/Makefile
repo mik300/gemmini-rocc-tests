@@ -53,6 +53,7 @@ tests = \
 	gemmini_counter \
 	template \
 	conv_layer\
+	linear_layer\
 
 tests_baremetal = $(tests:=-baremetal)
 
@@ -73,7 +74,7 @@ else
 endif
 
 BENCH_COMMON = $(abs_top_srcdir)/riscv-tests/benchmarks/common
-GEMMINI_HEADERS = $(abs_top_srcdir)/include/gemmini.h $(abs_top_srcdir)/include/gemmini_params.h $(abs_top_srcdir)/include/gemmini_testutils.h
+GEMMINI_HEADERS = $(abs_top_srcdir)/include/gemmini.h $(abs_top_srcdir)/include/gemmini_params.h $(abs_top_srcdir)/include/gemmini_testutils.h $(abs_top_srcdir)/include/resnet8_params.h $(abs_top_srcdir)/include/gemmini_nn.h
 
 CFLAGS := $(CFLAGS) \
 	-DPREALLOCATE=1 \
