@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h> 
 #ifndef BAREMETAL
 #include <sys/mman.h>
 #endif
@@ -10,6 +11,82 @@
 #include "include/resnet8_params.h"
 
 
+bool vec_is_equal(elem_t * a, elem_t * b, int len) {
+    for (int i = 0; i < len; i++)
+        if (a[i] != b[i])
+            return false;
+    return true;
+}
+
+void compute_errors(double *mae, double *mse, double *max_ae, elem_t *array1, elem_t *array2, size_t length) {
+    double sum_absolute_errors_mae = 0.0;
+    double sum_squared_errors_mse = 0.0;
+    double max_error = 0;
+
+    for (size_t i = 0; i < length; i++) {
+        double diff = fabs((double)array1[i] - (double)array2[i]); //diff is used to compute all 3 errors
+
+        sum_absolute_errors_mae += diff;
+
+        sum_squared_errors_mse += diff * diff;
+
+        if (diff > max_error){
+            max_error = diff;
+        }
+    }
+
+    *mae = sum_absolute_errors_mae / length;
+    *mse = sum_squared_errors_mse / length;
+    *max_ae = max_error;
+}
+
+int compute_leading_zeros(double fractional, int decimal_places){
+    int nb_zeros = 0;
+    while(nb_zeros < decimal_places){
+        fractional = fractional * 10.0;
+        // int whole_part = (int)fractional;
+        // double fract = fabs(fractional - whole_part);
+        // int fraction_part = (int)(fract * 100);
+        //printf("fractional = %d\n", (int)fractional);
+        if((int)fractional > 0){
+            return nb_zeros;
+        }
+        nb_zeros++;
+    }
+    return decimal_places;
+}
+
+int my_pow(int base, int exponent) {
+    int result = 1;
+    for (int i = 0; i < exponent; i++) {
+        result *= base;  // Multiply the base by itself
+    }
+
+    return result;
+}
+
+void split_double(double num, int *whole_part, int *fraction_part, int *leading_zeros, int decimal_places) {
+    *whole_part = (int)num;  // Get the integer part (left of the decimal)
+    
+    double fractional = fabs(num - *whole_part);  // Get the fractional part (right of the decimal)
+
+    *leading_zeros = compute_leading_zeros(fractional, decimal_places);
+
+    *fraction_part = (int)(fractional * my_pow(10, decimal_places));  // Convert the fractional part to an integer
+}
+
+void print_double(int whole, int fractional, int nb_of_leading_zeros) {
+    // Print the whole part
+    printf("%d.", whole);
+    
+    // Print leading zeros for the fractional part
+    for (int i = 0; i < nb_of_leading_zeros; i++) {
+        putchar('0');
+    }
+    
+    // Print the fractional part
+    printf("%d\n", fractional);
+}
 
 void flatten_weights(int out_channels, int kernel_dim, int in_channels,
         int patch_size,
@@ -42,14 +119,14 @@ void init_zeros_acc(acc_t * buf, int len) {
     }
 }
 
-const int IN_ROW_DIM = sizeof(layer1_0_conv1_in[0]) / sizeof(layer1_0_conv1_in[0][0]); //get size of second dimension
-const int IN_COL_DIM = sizeof(layer1_0_conv1_in[0][0]) / sizeof(layer1_0_conv1_in[0][0][0]); //get size of third dimension
-const int IN_CHANNELS = sizeof(layer1_0_conv1_in[0][0][0]) / sizeof(elem_t);//get size of fourth dimension
-const int OUT_CHANNELS = sizeof(layer1_0_conv1_w) / sizeof(layer1_0_conv1_w[0]); //get size of first dimension
+const int IN_ROW_DIM = sizeof(conv_1_in[0]) / sizeof(conv_1_in[0][0]); //get size of second dimension
+const int IN_COL_DIM = sizeof(conv_1_in[0][0]) / sizeof(conv_1_in[0][0][0]); //get size of third dimension
+const int IN_CHANNELS = sizeof(conv_1_in[0][0][0]) / sizeof(elem_t);//get size of fourth dimension
+const int OUT_CHANNELS = sizeof(conv_1_w) / sizeof(conv_1_w[0]); //get size of first dimension
 
 
-const int BATCH_SIZE = sizeof(layer1_0_conv1_in) / sizeof(layer1_0_conv1_in[0]); //get size of fist dimension of the array
-const int KERNEL_DIM = sizeof(layer1_0_conv1_w[0]) / sizeof(layer1_0_conv1_w[0][0]);
+const int BATCH_SIZE = sizeof(conv_1_in) / sizeof(conv_1_in[0]); //get size of fist dimension of the array
+const int KERNEL_DIM = sizeof(conv_1_w[0]) / sizeof(conv_1_w[0][0]);
 const int PADDING = 1;
 const int STRIDE = 1;
 
@@ -69,9 +146,6 @@ int main() {
         exit(1);
         }
     #endif
-
-
-    
 
     printf("IN_ROW_DIM = %d\n", IN_ROW_DIM);
     printf("IN_COL_DIM = %d\n", IN_COL_DIM);
@@ -115,7 +189,7 @@ int main() {
     printf("Flatten weights...\n");
     flatten_weights(OUT_CHANNELS, KERNEL_DIM, IN_CHANNELS,
             PATCH_SIZE,
-            layer1_0_conv1_w,
+            conv_1_w,
             weights_mat);
 
     printf("Gemmini conv...\n");
@@ -126,17 +200,38 @@ int main() {
         STRIDE, 1, 1, PADDING, KERNEL_DIM,
         false, false, false, false, false,
 
-        (elem_t*)layer1_0_conv1_in,
+        (elem_t*)conv_1_in,
         (elem_t*)weights_mat,
-        NO_BIAS ? NULL : (acc_t*)layer1_0_conv1_b,
+        NO_BIAS ? NULL : (acc_t*)conv_1_b,
         (elem_t*)output_mat,
 
-        NO_ACTIVATION, 1.0 / 276,
+        NO_ACTIVATION, 1.0 / 157,
         0, 0, 0,
 
         WS);
     uint64_t end_gemmini = read_cycles();
     printf("Gemmini conv took %llu cycles\n", end_gemmini - start_gemmini);
+    
+
+    double mae, mse, max_ae;
+    int whole_mae, fraction_mae, whole_mse, fraction_mse, whole_max_ae, fraction_max_ae;
+    int leading_zeros_mae, leading_zeros_mse, leading_zeros_max_ae;
+
+    
+    compute_errors(&mae, &mse, &max_ae, &conv_1_out[0][0][0][0], &output_mat[0][0], sizeof(conv_1_out) / sizeof(elem_t));
+
+    split_double(mae, &whole_mae, &fraction_mae, &leading_zeros_mae, 5);
+    split_double(mse, &whole_mse, &fraction_mse, &leading_zeros_mse, 5);
+    split_double(max_ae, &whole_max_ae, &fraction_max_ae, &leading_zeros_max_ae, 0);
+
+    printf("Mean Absolute Error (MAE) = ");
+    print_double(whole_mae, fraction_mae, leading_zeros_mae);
+
+    printf("Mean Squared Error (MSE) = ");
+    print_double(whole_mse, fraction_mse, leading_zeros_mse);
+
+    printf("Maximum Absolute Error (Max AE) = ");
+    print_double(whole_max_ae, fraction_max_ae, leading_zeros_max_ae);
 
     // printf("input:\n");
     //     for (int batch = 0; batch < BATCH_SIZE; batch++) {
@@ -146,7 +241,7 @@ int main() {
     //             for (int icol = 0; icol < IN_COL_DIM; icol++) {
     //                 printf("[");
     //                 for (int ich = 0; ich < IN_CHANNELS; ich++) {
-    //                     printf("%d,", layer1_0_conv1_in[batch][irow][icol][ich]);
+    //                     printf("%d,", conv_1_in[batch][irow][icol][ich]);
     //                 }
     //                 printf("],");
     //             }
@@ -164,7 +259,7 @@ int main() {
     //             for (int hker = 0; hker < KERNEL_DIM; hker++) {
     //                 printf("[");
     //                 for (int ich = 0; ich < IN_CHANNELS; ich++) {
-    //                     printf("%d,", layer1_0_conv1_w[och][wker][hker][ich]);
+    //                     printf("%d,", conv_1_w[och][wker][hker][ich]);
     //                 }
     //                 printf("],");
     //             }
