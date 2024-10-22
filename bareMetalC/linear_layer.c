@@ -27,7 +27,7 @@ const size_t I = BATCH_SIZE;
 const size_t J = NB_CLASSES;
 const size_t K = sizeof(linear_w) / sizeof(linear_w[0]);
 
-const bool FAST = 0;
+const bool FAST = 1;
 
 void compute_errors(double *mae, double *mse, double *max_ae, elem_t *array1, elem_t *array2, size_t length) {
     double sum_absolute_errors_mae = 0.0;
@@ -114,17 +114,15 @@ int main() {
 
 
     gemmini_flush(0);
-    gemmini_config_multiplier(255, 16383);
+    gemmini_config_multiplier(255 - appr_level[7], 16383);
 
     elem_t output_mat[BATCH_SIZE][NB_CLASSES];
 
     printf("Gemmini matmul...\n");
-
-    
     uint64_t start_gemmini = read_cycles();
     tiled_matmul_nn_auto(I, J, K,
         linear_in, linear_w, linear_b, output_mat,
-        NO_ACTIVATION, 1.0 / 49,
+        NO_ACTIVATION, 1.0 / 150,
         false,
         OS, false, "linear");
 
@@ -168,9 +166,11 @@ int main() {
     int whole_mae, fraction_mae, whole_mse, fraction_mse, whole_max_ae, fraction_max_ae;
     int leading_zeros_mae, leading_zeros_mse, leading_zeros_max_ae;
 
-    
+    uint64_t start_error_computation = read_cycles();
     compute_errors(&mae, &mse, &max_ae, &linear_out[0][0], &output_mat[0][0], sizeof(linear_out) / sizeof(elem_t));
-
+    uint64_t end_error_computation = read_cycles();
+    printf("Error compuation took %llu cycles\n", end_gemmini - start_gemmini);
+    
     split_double(mae, &whole_mae, &fraction_mae, &leading_zeros_mae, 5);
     split_double(mse, &whole_mse, &fraction_mse, &leading_zeros_mse, 5);
     split_double(max_ae, &whole_max_ae, &fraction_max_ae, &leading_zeros_max_ae, 0);

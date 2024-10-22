@@ -29,7 +29,7 @@ const int OUT_COL_DIM = ((IN_COL_DIM + 2*PADDING - KERNEL_DIM) / STRIDE + 1);
 const int PATCH_SIZE = (KERNEL_DIM * KERNEL_DIM * IN_CHANNELS);
 const int N_PATCHES = (BATCH_SIZE * OUT_ROW_DIM * OUT_COL_DIM);
 
-const bool FAST = 0;
+const bool FAST = 1;
 
 
 
@@ -163,7 +163,7 @@ int main() {
     printf("N_PATCHES = %d\n", N_PATCHES);
 
     gemmini_flush(0);
-    gemmini_config_multiplier(255, 16383);
+    gemmini_config_multiplier(255 - appr_level[6], 16383);
     
 
     printf("Input dimensions (rows by columns): %u by %u\n", IN_ROW_DIM, IN_COL_DIM);
@@ -188,11 +188,14 @@ int main() {
     elem_t weights_mat[PATCH_SIZE][OUT_CHANNELS];
     elem_t output_mat[N_PATCHES][OUT_CHANNELS];
 
+    uint64_t start_flattening_weights = read_cycles();
     printf("Flatten weights...\n");
     flatten_weights(OUT_CHANNELS, KERNEL_DIM, IN_CHANNELS,
             PATCH_SIZE,
             layer3_0_conv2_w,
             weights_mat);
+    uint64_t end_flattening_weights = read_cycles();
+    printf("Flattening weights took %llu cycles\n", start_flattening_weights - end_flattening_weights);
 
     printf("Gemmini conv...\n");
     uint64_t start_gemmini = read_cycles();
@@ -219,8 +222,10 @@ int main() {
     int whole_mae, fraction_mae, whole_mse, fraction_mse, whole_max_ae, fraction_max_ae;
     int leading_zeros_mae, leading_zeros_mse, leading_zeros_max_ae;
 
-    
+    uint64_t start_error_computation = read_cycles();
     compute_errors(&mae, &mse, &max_ae, &layer3_0_conv2_out[0][0][0][0], &output_mat[0][0], sizeof(layer3_0_conv2_out) / sizeof(elem_t));
+    uint64_t end_error_computation = read_cycles();
+    printf("Error compuation took %llu cycles\n", end_gemmini - start_gemmini);
 
     split_double(mae, &whole_mae, &fraction_mae, &leading_zeros_mae, 5);
     split_double(mse, &whole_mse, &fraction_mse, &leading_zeros_mse, 5);
