@@ -11,6 +11,28 @@
 #include "include/resnet8_params.h"
 
 
+
+const int IN_ROW_DIM = sizeof(layer3_0_conv2_in[0]) / sizeof(layer3_0_conv2_in[0][0]); //get size of second dimension
+const int IN_COL_DIM = sizeof(layer3_0_conv2_in[0][0]) / sizeof(layer3_0_conv2_in[0][0][0]); //get size of third dimension
+const int IN_CHANNELS = sizeof(layer3_0_conv2_in[0][0][0]) / sizeof(elem_t);//get size of fourth dimension
+const int OUT_CHANNELS = sizeof(layer3_0_conv2_w) / sizeof(layer3_0_conv2_w[0]); //get size of first dimension
+
+const int BATCH_SIZE = sizeof(layer3_0_conv2_in) / sizeof(layer3_0_conv2_in[0]); //get size of fist dimension of the array
+const int KERNEL_DIM = sizeof(layer3_0_conv2_w[0]) / sizeof(layer3_0_conv2_w[0][0]);
+const int PADDING = 1;
+const int STRIDE = 1;
+
+const int NO_BIAS = 1;
+
+const int OUT_ROW_DIM = ((IN_ROW_DIM + 2*PADDING - KERNEL_DIM) / STRIDE + 1);
+const int OUT_COL_DIM = ((IN_COL_DIM + 2*PADDING - KERNEL_DIM) / STRIDE + 1);
+const int PATCH_SIZE = (KERNEL_DIM * KERNEL_DIM * IN_CHANNELS);
+const int N_PATCHES = (BATCH_SIZE * OUT_ROW_DIM * OUT_COL_DIM);
+
+const bool FAST = 0;
+
+
+
 bool vec_is_equal(elem_t * a, elem_t * b, int len) {
     for (int i = 0; i < len; i++)
         if (a[i] != b[i])
@@ -111,33 +133,13 @@ void flatten_weights(int out_channels, int kernel_dim, int in_channels,
     }
 }
 
-
-
 void init_zeros_acc(acc_t * buf, int len) {
     for (acc_t * ptr = buf; ptr < buf + len; ptr++) {
         *ptr = 0;
     }
 }
 
-const int IN_ROW_DIM = sizeof(conv_1_in[0]) / sizeof(conv_1_in[0][0]); //get size of second dimension
-const int IN_COL_DIM = sizeof(conv_1_in[0][0]) / sizeof(conv_1_in[0][0][0]); //get size of third dimension
-const int IN_CHANNELS = sizeof(conv_1_in[0][0][0]) / sizeof(elem_t);//get size of fourth dimension
-const int OUT_CHANNELS = sizeof(conv_1_w) / sizeof(conv_1_w[0]); //get size of first dimension
 
-
-const int BATCH_SIZE = sizeof(conv_1_in) / sizeof(conv_1_in[0]); //get size of fist dimension of the array
-const int KERNEL_DIM = sizeof(conv_1_w[0]) / sizeof(conv_1_w[0][0]);
-const int PADDING = 1;
-const int STRIDE = 1;
-
-
-
-const int NO_BIAS = 1;
-
-const int OUT_ROW_DIM = ((IN_ROW_DIM + 2*PADDING - KERNEL_DIM) / STRIDE + 1);
-const int OUT_COL_DIM = ((IN_COL_DIM + 2*PADDING - KERNEL_DIM) / STRIDE + 1);
-const int PATCH_SIZE = (KERNEL_DIM * KERNEL_DIM * IN_CHANNELS);
-const int N_PATCHES = (BATCH_SIZE * OUT_ROW_DIM * OUT_COL_DIM);
 
 int main() {
     #ifndef BAREMETAL
@@ -189,7 +191,7 @@ int main() {
     printf("Flatten weights...\n");
     flatten_weights(OUT_CHANNELS, KERNEL_DIM, IN_CHANNELS,
             PATCH_SIZE,
-            conv_1_w,
+            layer3_0_conv2_w,
             weights_mat);
 
     printf("Gemmini conv...\n");
@@ -200,12 +202,12 @@ int main() {
         STRIDE, 1, 1, PADDING, KERNEL_DIM,
         false, false, false, false, false,
 
-        (elem_t*)conv_1_in,
+        (elem_t*)layer3_0_conv2_in,
         (elem_t*)weights_mat,
-        NO_BIAS ? NULL : (acc_t*)conv_1_b,
+        NO_BIAS ? NULL : (acc_t*)layer3_0_conv2_b,
         (elem_t*)output_mat,
 
-        NO_ACTIVATION, 1.0 / 157,
+        NO_ACTIVATION, 1.0 / 452,
         0, 0, 0,
 
         WS);
@@ -218,7 +220,7 @@ int main() {
     int leading_zeros_mae, leading_zeros_mse, leading_zeros_max_ae;
 
     
-    compute_errors(&mae, &mse, &max_ae, &conv_1_out[0][0][0][0], &output_mat[0][0], sizeof(conv_1_out) / sizeof(elem_t));
+    compute_errors(&mae, &mse, &max_ae, &layer3_0_conv2_out[0][0][0][0], &output_mat[0][0], sizeof(layer3_0_conv2_out) / sizeof(elem_t));
 
     split_double(mae, &whole_mae, &fraction_mae, &leading_zeros_mae, 5);
     split_double(mse, &whole_mse, &fraction_mse, &leading_zeros_mse, 5);
@@ -241,7 +243,7 @@ int main() {
     //             for (int icol = 0; icol < IN_COL_DIM; icol++) {
     //                 printf("[");
     //                 for (int ich = 0; ich < IN_CHANNELS; ich++) {
-    //                     printf("%d,", conv_1_in[batch][irow][icol][ich]);
+    //                     printf("%d,", layer3_0_conv2_in[batch][irow][icol][ich]);
     //                 }
     //                 printf("],");
     //             }
@@ -259,7 +261,7 @@ int main() {
     //             for (int hker = 0; hker < KERNEL_DIM; hker++) {
     //                 printf("[");
     //                 for (int ich = 0; ich < IN_CHANNELS; ich++) {
-    //                     printf("%d,", conv_1_w[och][wker][hker][ich]);
+    //                     printf("%d,", layer3_0_conv2_w[och][wker][hker][ich]);
     //                 }
     //                 printf("],");
     //             }
@@ -276,21 +278,21 @@ int main() {
     // printf("\n\n");
 
 
-
-    printf("output_mat:\n");
-    for (int orow = 0; orow < BATCH_SIZE * OUT_ROW_DIM * OUT_COL_DIM; orow++) {
-        printf("[");
-        for (int och = 0; och < OUT_CHANNELS; och++) {
-            if(och == OUT_CHANNELS-1){
-                printf("%d", output_mat[orow][och]);
-            } else{
-                printf("%d,", output_mat[orow][och]);
+    if(!FAST){
+        printf("output_mat:\n");
+        for (int orow = 0; orow < BATCH_SIZE * OUT_ROW_DIM * OUT_COL_DIM; orow++) {
+            printf("[");
+            for (int och = 0; och < OUT_CHANNELS; och++) {
+                if(och == OUT_CHANNELS-1){
+                    printf("%d", output_mat[orow][och]);
+                } else{
+                    printf("%d,", output_mat[orow][och]);
+                }
             }
+            printf("]\n");
         }
-        printf("]\n");
+        printf("\n");
     }
-    printf("\n");
-
-
+    
     return 0;
 }

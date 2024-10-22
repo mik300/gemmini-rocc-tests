@@ -21,12 +21,13 @@ const int BATCH_SIZE = sizeof(linear_in) / sizeof(linear_in[0]); //get size of f
 const int PADDING = 1;
 const int STRIDE = 1;
 
-
 const int NO_BIAS = 0;
 
 const size_t I = BATCH_SIZE;
 const size_t J = NB_CLASSES;
 const size_t K = sizeof(linear_w) / sizeof(linear_w[0]);
+
+const bool FAST = 0;
 
 void compute_errors(double *mae, double *mse, double *max_ae, elem_t *array1, elem_t *array2, size_t length) {
     double sum_absolute_errors_mae = 0.0;
@@ -117,7 +118,7 @@ int main() {
 
     elem_t output_mat[BATCH_SIZE][NB_CLASSES];
 
-    printf("Gemmini conv...\n");
+    printf("Gemmini matmul...\n");
 
     
     uint64_t start_gemmini = read_cycles();
@@ -129,7 +130,7 @@ int main() {
 
 
     uint64_t end_gemmini = read_cycles();
-    printf("Gemmini conv took %llu cycles\n\n", end_gemmini - start_gemmini);
+    printf("Gemmini matmul took %llu cycles\n\n", end_gemmini - start_gemmini);
 
     int max_index[BATCH_SIZE];
     for (int batch = 0; batch < BATCH_SIZE; batch++) {
@@ -140,20 +141,22 @@ int main() {
         }
     }
 
-    printf("output_mat:\n");
-    for (int batch = 0; batch < BATCH_SIZE; batch++) {
-        printf("[");
-        for (int class = 0; class < NB_CLASSES; class++) {
-            if(class == NB_CLASSES-1){
-                printf("%d", output_mat[batch][class]);
-            } else{
-                printf("%d,", output_mat[batch][class]);
+    if(!FAST){
+        printf("output_mat:\n");
+        for (int batch = 0; batch < BATCH_SIZE; batch++) {
+            printf("[");
+            for (int class = 0; class < NB_CLASSES; class++) {
+                if(class == NB_CLASSES-1){
+                    printf("%d", output_mat[batch][class]);
+                } else{
+                    printf("%d,", output_mat[batch][class]);
+                }
             }
+            printf("]\n");
         }
-        printf("]\n");
+        printf("\n");
     }
-    printf("\n");
-
+    
     for (int batch = 0; batch < BATCH_SIZE; batch++) {
         printf("max_index[%d] = %d\n", batch, max_index[batch]);
         if(max_index[batch] != labels[batch]) {
@@ -166,7 +169,7 @@ int main() {
     int leading_zeros_mae, leading_zeros_mse, leading_zeros_max_ae;
 
     
-    compute_errors(&mae, &mse, &max_ae, &conv_1_out[0][0][0][0], &output_mat[0][0], sizeof(linear_out) / sizeof(elem_t));
+    compute_errors(&mae, &mse, &max_ae, &linear_out[0][0], &output_mat[0][0], sizeof(linear_out) / sizeof(elem_t));
 
     split_double(mae, &whole_mae, &fraction_mae, &leading_zeros_mae, 5);
     split_double(mse, &whole_mse, &fraction_mse, &leading_zeros_mse, 5);
