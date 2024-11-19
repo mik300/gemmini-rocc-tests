@@ -77,7 +77,7 @@ int main (int argc, char * argv[]) {
         conv_1_params.stride, 1, 1, conv_1_params.padding, conv_1_params.kernel_size,
         false, false, false, false, false,
 
-        (elem_t*)images, (elem_t*)conv_1_w, (acc_t*)conv_1_b, (elem_t*)conv_1_out_pooled,
+        (elem_t*)alexnet_images, (elem_t*)conv_1_w, (acc_t*)conv_1_b, (elem_t*)conv_1_out_pooled,
 
         RELU, conv_1_params.output_scale,
         conv_1_params.pool_size, conv_1_params.pool_stride, conv_1_params.pool_padding,
@@ -265,7 +265,7 @@ int main (int argc, char * argv[]) {
                 max_idx = i;
             }
         }
-	preds[batch] = max_idx;
+	    preds[batch] = max_idx;
         printf("Prediction: %u (score: %d)\n", max_idx, max_prob);
     }
 
