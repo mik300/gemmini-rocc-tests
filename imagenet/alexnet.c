@@ -185,8 +185,7 @@ int main (int argc, char * argv[]) {
     printf("conv_5 cycles: %llu \n", end - start);
 
     // Global averaging
-    /*
-    static elem_t average[9216][4] row_align(1);
+    static elem_t average[4][9216] row_align(1);
 
     start = read_cycles();
 
@@ -198,23 +197,24 @@ int main (int argc, char * argv[]) {
 		        int row_axis = row * conv_5_params.out_dim_pooled;
                 for (int col = 0; col < conv_5_params.out_dim_pooled; col++) {
                     //sum += conv_5_out_pooled[batch][row][col][channel];
-		            average[col+row_axis+channel_axis][batch] = conv_5_out_pooled[batch][row][col][channel];
+		            average[batch][col+row_axis+channel_axis] = conv_5_out_pooled[batch][row][col][channel];
 		        }
             }
         }
     }
-    */
-    static elem_t average[4][9216] row_align(1);
+    
+    
 
-    tiled_global_average_auto(conv_5_out_pooled, average, conv_5_params.batch_size,
-        conv_5_params.out_channels, conv_5_params.out_row_dim, WS);
-
-    start = read_cycles();
+    // tiled_global_average_auto(conv_5_out_pooled, average, conv_5_params.batch_size,
+    //     conv_5_params.out_channels, conv_5_params.out_row_dim, WS);
 
     end = read_cycles();
-    other_cycles += end - start;
 
-      // fc_6
+    other_cycles += end - start;
+    printf("Global averaging cycles: %llu \n", end - start);
+
+
+    // fc_6
     start = read_cycles();
 
     tiled_matmul_nn_auto(fc_6_params.I, fc_6_params.J, fc_6_params.K,
@@ -284,7 +284,7 @@ int main (int argc, char * argv[]) {
 
     int correct[] = {824, 725, 135, 646};
     for (int i = 0; i < fc_8_params.batch_size; i++) {
-        if (preds[i] != correct[i] && fc_8_out[i][preds[i]] != fc_8_out[i][correct[i]]) {
+        if (preds[i] != labels[i] && fc_8_out[i][preds[i]] != fc_8_out[i][labels[i]]) {
             printf("Prediction %d is incorrect!\nFAIL\n", i+1);
             //exit(1);
         }
