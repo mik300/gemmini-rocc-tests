@@ -1,10 +1,10 @@
 include $(abs_top_srcdir)/Makefrag
 
-tests = \
+#tests = \
 	resnet50 \
 	mobilenet \
-	# alexnet \
-
+	alexnet 
+tests = alexnet
 tests_baremetal = $(tests:=-baremetal)
 runs_baremetal = $(addsuffix .run,$(tests_baremetal))
 ifdef BAREMETAL_ONLY
