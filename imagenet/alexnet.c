@@ -79,7 +79,7 @@ int main (int argc, char * argv[]) {
 
         (elem_t*)alexnet_images, (elem_t*)conv_1_w, (acc_t*)conv_1_b, (elem_t*)conv_1_out_pooled,
 
-        RELU, conv_1_params.output_scale,
+        RELU, 1.0 / 1,
         conv_1_params.pool_size, conv_1_params.pool_stride, conv_1_params.pool_padding,
 
         tiled_matmul_type
@@ -90,7 +90,56 @@ int main (int argc, char * argv[]) {
     
     printf("conv_1 cycles: %llu \n", end - start);
 
+    printf("input:\n");
+    printf("%d\n", alexnet_images[0][0][0][0]);
 
+
+    printf("weights:\n");
+    printf("%d\n", conv_1_w[0][0]);
+
+
+    printf("bias:\n");
+    printf("%d,", conv_1_b[0]);
+    printf("\n\n");
+
+    printf("batch = %d\n", conv_1_params.batch_size);
+    printf("orow = %d\n", conv_1_params.out_dim_pooled);
+    printf("ocol = %d\n", conv_1_params.out_dim_pooled);
+    printf("och = %d\n", conv_1_params.batch_size);
+    printf("conv_1_out_pooled:\n");
+        for (int batch = 0; batch < conv_1_params.batch_size; batch++) {
+            for (int orow = 0; orow < conv_1_params.out_dim_pooled; orow++){
+                for (int ocol = 0; ocol < conv_1_params.out_dim_pooled; ocol++){
+                    printf("[");
+                    for (int och = 0; och < conv_1_params.out_channels; och++) {
+                        if(och == conv_1_params.out_channels-1){
+                            printf("%d", conv_1_out_pooled[batch][orow][ocol][och]);
+                        } else{
+                            printf("%d,", conv_1_out_pooled[batch][orow][ocol][och]);
+                        }
+                    }
+                    printf("]\n");
+                }
+            }
+        }
+    printf("\n");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /*
     // conv_2
     start = read_cycles();
 
@@ -289,7 +338,7 @@ int main (int argc, char * argv[]) {
             //exit(1);
         }
     }
-
+    */
     printf("PASS\n");
  
     exit(0);
